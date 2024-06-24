@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, Request, HTTPException
+from fastapi import FastAPI, Body, Request, HTTPException, Path, Query
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -110,7 +110,7 @@ def get_html():
 
 
 @app.get('/movies/{id}', tags=["movies"])
-def get_movie_by_id(id: int):
+def get_movie_by_id(id: int = Path(ge=1, le=2000)):
     for movie in movies:
         if movie['id'] == id:
             return movie
@@ -118,7 +118,7 @@ def get_movie_by_id(id: int):
 
 
 @app.get('/movies/', tags=["movies"])
-def get_movie_by_category(category: str, year: int = None ):
+def get_movie_by_category(category: str = Query(min_length=5, max_length=20), year: int = None ):
     return [movie for movie in movies if movie['category'].lower() == category.lower() and movie['year'] == year]
     # return [movie for movie in movies if movie['category'].lower() == category.lower()]
     # return category
