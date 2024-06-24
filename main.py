@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 
 app = FastAPI()
@@ -135,3 +135,25 @@ def delete_movie(id: int):
             movies.remove(movie)
             return {'message': 'Movie deleted'}
     return {'message': 'Movie not found'}
+
+
+
+@app.put('/moviesImproved/{id}', tags=['movies2'])
+async def update_movie(id: int, request: Request):
+    update_movie = await request.json()
+    for index, movie in enumerate(movies):
+        if movie["id"] == id:
+            movies[index].update(update_movie)
+            return movies[index]
+
+    raise HTTPException(status_code=404, detail="Movie not found")
+
+
+@app.delete('/moviesImproved/{id}', tags=['movies2'])
+async def delete_movie(id: int):
+    for index, movie in enumerate(movies):
+        if movie["id"] == id:
+            del movies[index]
+            return {'status': 'deleted movie'}
+
+    raise HTTPException(status_code=404, detail="Movie not found")
