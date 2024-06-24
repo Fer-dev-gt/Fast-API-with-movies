@@ -1,9 +1,20 @@
 from fastapi import FastAPI, Body, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
+from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 app.title = "Le cambié el nombre a mi API"
 app.version = "7.7.7"
+
+class Movie(BaseModel):
+    id: Optional[int] = None
+    title: str
+    overview: str
+    year: int
+    rating: float
+    category: str
+
 
 movies = [
     {
@@ -100,28 +111,20 @@ def get_movie_by_category(category: str, year: int = None ):
 # Aplicando Metodos POST
 
 @app.post('/movies', tags=["movies"])
-def create_movie(id: int = Body(...), title: str = Body(...), overview: str = Body(...), year: int = Body(...), rating: float = Body(...), category: str = Body(...)):
-    movie = {
-        'id': id,
-        'title': title,
-        'overview': overview,
-        'year': year,
-        'rating': rating,
-        'category': category
-    }
+def create_movie(movie: Movie):
     movies.append(movie)
-    return movie
+    return movies
 
 # Aplicando Metodos PUT
 @app.put('/movies/{id}', tags=["movies"])
-def update_movie(id: int, title: str = Body(...), overview: str = Body(...), year: int = Body(...), rating: float = Body(...), category: str = Body(...)):
+def update_movie(id: int, movie: Movie):
     for movie in movies:
         if movie['id'] == id:
-            movie['title'] = title
-            movie['overview'] = overview
-            movie['year'] = year
-            movie['rating'] = rating
-            movie['category'] = category
+            movie['title'] = movie.title
+            movie['overview'] = movie.overview
+            movie['year'] = movie.year
+            movie['rating'] = movie.rating
+            movie['category'] = movie.category
             return movie
     return {'message': 'Movie not found'}
 
