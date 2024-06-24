@@ -81,3 +81,12 @@ def get_movies():
 @app.get('/archivo-html', tags=['Estoy retornando un archivo HTML'])
 def get_html():
     return FileResponse('HelloWorld.html')
+
+
+
+@app.get('/movies/{id}', tags=["Getting a movie by id"])
+def get_movie_by_id(id: int):
+    for movie in movies:
+        if movie['id'] == id:
+            return movie
+    return {'message': 'Movie not found'}
