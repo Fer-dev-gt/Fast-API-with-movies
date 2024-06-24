@@ -98,9 +98,9 @@ def message():
 
 
 
-@app.get('/movies', tags=["movies"], response_model=List[Movie])
+@app.get('/movies', tags=["movies"], response_model=List[Movie], status_code=200)
 def get_movies() -> List[Movie]:
-    return JSONResponse(content=movies)
+    return JSONResponse(content=movies, status_code=200)
 
 
 # Tabmien podemos retornar un archivo HTML para trabajarlo de forma más comoda
@@ -124,14 +124,14 @@ def get_movie_by_category(category: str = Query(min_length=5, max_length=20), ye
 
 
 # Aplicando Metodos POST
-@app.post('/movies', tags=["movies"], response_model=dict)
+@app.post('/movies', tags=["movies"], response_model=dict, status_code=201)
 def create_movie(movie: Movie) -> dict:
     movies.append(movie)
     return JSONResponse(content={'message': 'Movie created successfully'}, status_code=201)
 
 
 # Aplicando Metodos PUT
-@app.put('/movies/{id}', tags=["movies"], response_model=dict)
+@app.put('/movies/{id}', tags=["movies"], response_model=dict, status_code=200)
 def update_movie(id: int, movie: Movie) -> dict:
     for movie in movies:
         if movie['id'] == id:
@@ -146,13 +146,13 @@ def update_movie(id: int, movie: Movie) -> dict:
 
 
 # Aplicando Metodos Delete
-@app.delete('/movies/{id}', tags=["movies"], response_model=dict)
+@app.delete('/movies/{id}', tags=["movies"], response_model=dict, status_code=200)
 def delete_movie(id: int) -> dict:
     for movie in movies:
         if movie['id'] == id:
             movies.remove(movie)
-            return {'message': 'Movie deleted'}
-    return {'message': 'Movie not found'}
+            return JSONResponse(content={'message': 'Movie deleted successfully'}, status_code=200)
+    return JSONResponse(content={'message': 'Movie not found'}, status_code=404)
 
 
 
