@@ -5,7 +5,8 @@ from typing import Optional, List
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
 from config.database import Session, engine, Base
-from models.movie import Movie
+from models.movie import Movie as MovieModel
+from fastapi.encoders import jsonable_encoder
 
 
 app = FastAPI()
@@ -132,7 +133,11 @@ def message():
 
 @app.get('/movies', tags=['movies'], response_model=List[Movie], status_code=200, dependencies=[Depends(JWTBearer())])
 def get_movies() -> List[Movie]:
-    return JSONResponse(status_code=200, content=movies)
+
+    db = Session()                                                                      # Creo la sesión de la base de datos
+    result = db.query(MovieModel).all()                                                 # Acá estoy obteniendo todos los registros de la tabla movies
+
+    return JSONResponse(status_code=200, content=jsonable_encoder(result))              # Acá estoy retornando los registros de la tabla movies, uso jsonable_encoder para convertir los objetos de la base de datos a diccionarios
 
 
 # Tabmien podemos retornar un archivo HTML para trabajarlo de forma más comoda
@@ -143,30 +148,52 @@ def get_html():
 
 @app.get('/movies/{id}', tags=["movies"], response_model=Movie)
 def get_movie_by_id(id: int = Path(ge=1, le=2000)) -> Movie:
-    for movie in movies:
-        if movie['id'] == id:
-            return JSONResponse(content=movie)
-    return JSONResponse(content={'message': 'Movie not found'}, status_code=404)
+
+    db = Session()                                    
+    
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()                                  # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL y lo guardo en la variable result solo el primer registro que encuentre
+
+    if not result:
+        return JSONResponse(status_code = 404, content = {'message': 'Movie not found'})               # Acá estoy retornando un mensaje de error si no se encuentra el registro
+    return JSONResponse(status_code = 200, content =jsonable_encoder(result))                          # Acá estoy retornando el registro de la tabla movies, uso jsonable_encoder para convertir el objeto de la base de datos a diccionario
+
 
 
 @app.get('/movies/', tags=["movies"], response_model=List[Movie])
 def get_movie_by_category(category: str = Query(min_length=5, max_length=20), year: int = None ) -> List[Movie]:
-    data = [movie for movie in movies if movie['category'].lower() == category.lower() and movie['year'] == year]
-    return JSONResponse(content=data)
+
+    db = Session()                                                                                                  # Creo la sesión de la base de datos
+
+    result = db.query(MovieModel).filter(MovieModel.category == category).all()                                     # Acá estoy obteniendo todos los registros de la tabla movies que tengan la categoría que viene en la URL
+
+    if not result:
+        return JSONResponse(status_code = 404, content = {'message': 'Movie not found by category'})                # Acá estoy retornando un mensaje de error si no se encuentra el registro
+
+    return JSONResponse(status_code = 200, content = jsonable_encoder(result))                                      # Acá estoy retornando los registros de la tabla movies, uso jsonable_encoder para convertir los objetos de la base de datos a diccionarios
 
 
 # Aplicando Metodos POST
 @app.post('/movies', tags=["movies"], response_model=dict, status_code=201)
 def create_movie(movie: Movie) -> dict:
-    movies.append(movie)
+    db = Session()                                                                                      # Creo la sesión de la base de datos
+    new_movie = MovieModel(**movie.model_dump())                                                        # Acá estoy creando una instancia de la clase MovieModel con los datos que vienen en el body de la petición, el ** significa que estoy desempaquetando el diccionario
+    db.add(new_movie)                                                                                   # Acá estoy agregando la instancia de la clase MovieModel a la sesión de la base de datos
+    db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
+
     return JSONResponse(content={'message': 'Movie created successfully'}, status_code=201)
+
 
 
 @app.post('/login', tags=["auth"])
 def login(user: User):
     if user.email == 'admin@gmail.com' and user.password == 'admin':
-        token: str = create_token(user.model_dump())
-        return JSONResponse(content=token, status_code=200)
+        try:
+            token: str = create_token(user.dict())
+            return JSONResponse(content={"token": token}, status_code=200)
+        except Exception as e:
+            return JSONResponse(content={"error": str(e)}, status_code=500)
+    else:
+        return JSONResponse(content={"error": "Invalid credentials"}, status_code=401)
 
 
 # Aplicando Metodos PUT
