@@ -4,10 +4,16 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
+from config.database import Session, engine, Base
+from models.movie import Movie
+
 
 app = FastAPI()
 app.title = "Le cambié el nombre a mi API"
 app.version = "7.7.7"
+
+
+Base.metadata.create_all(bind = engine)         # Acá estoy creando las tablas en la base de datos y hago la conexión con la base de datos usando el motor de la base de datos
 
 
 class JWTBearer(HTTPBearer):
