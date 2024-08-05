@@ -7,35 +7,18 @@ from fastapi.security import HTTPBearer
 from config.database import Session, engine, Base
 from models.movie import Movie as MovieModel
 from fastapi.encoders import jsonable_encoder
+from middlewares.error_handler import ErrorHandler
+from middlewares.jwt_bearer import JWTBearer
+
 
 
 app = FastAPI()
 app.title = "Le cambié el nombre a mi API"
 app.version = "7.7.7"
 
+app.add_middleware(ErrorHandler)
 
 Base.metadata.create_all(bind = engine)         # Acá estoy creando las tablas en la base de datos y hago la conexión con la base de datos usando el motor de la base de datos
-
-
-class JWTBearer(HTTPBearer):
-    async def __call__(self, request: Request):
-       auth = await super().__call__(request)
-       data = validate_token(auth.credentials)
-       if data['email'] != "admin@gmail.com":
-           raise HTTPException(status_code=403, detail="Credentials not valid") 
-
-    # def __init__(self, auto_error: bool = True):
-    #     super(JWTBearer, self).__init__(auto_error=auto_error)
-
-    # async def __call__(self, request: Request):
-    #     credentials = await super(JWTBearer, self).__call__(request)
-    #     if credentials:
-    #         return credentials
-    #     else:
-    #         raise HTTPException(
-    #             status_code=403, detail="Invalid authorization code"
-    #         )
-
 
 class User(BaseModel):
     username: str
@@ -213,6 +196,7 @@ def update_movie(id: int, movie: Movie) -> dict:
     result.category = movie.category                                                                    # Acá estoy actualizando la categoría del registro
 
     db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
+    db.refresh(result)                                                                                  # Acá estoy refrescando el registro
 
     return JSONResponse(status_code=200, content={'message': 'Movie updated successfully'})             # Acá estoy retornando un mensaje de éxito
 
@@ -240,6 +224,7 @@ def delete_movie(id: int) -> dict:
     
     db.delete(result)                                                                                   # Acá estoy eliminando el registro de la base de datos
     db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
+    db.refresh(result)                                                                                  # Acá estoy refrescando el registro
 
     return JSONResponse(content={'message': 'Movie deleted successfully'}, status_code=200)             # Acá estoy retornando un mensaje de éxito
 
