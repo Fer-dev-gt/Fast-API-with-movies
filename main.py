@@ -199,15 +199,22 @@ def login(user: User):
 # Aplicando Metodos PUT
 @app.put('/movies/{id}', tags=["movies"], response_model=dict, status_code=200)
 def update_movie(id: int, movie: Movie) -> dict:
-    for movie in movies:
-        if movie['id'] == id:
-            movie['title'] = movie.title
-            movie['overview'] = movie.overview
-            movie['year'] = movie.year
-            movie['rating'] = movie.rating
-            movie['category'] = movie.category
-            return JSONResponse(content={'message': 'Movie updated successfully'}, status_code=200)
-    return JSONResponse(content={'message': 'Movie not found'}, status_code=404)
+
+    db = Session()                                                                                      # Creo la sesión de la base de datos
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()                                   # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL y lo guardo en la variable result solo el primer registro que encuentre
+
+    if not result:
+        return JSONResponse(status_code = 404, content = {'message': 'Movie not found'})                # Acá estoy retornando un mensaje de error si no se encuentra el registro
+    
+    result.title = movie.title                                                                          # Acá estoy actualizando el título del registro
+    result.overview = movie.overview                                                                    # Acá estoy actualizando la descripción del registro
+    result.year = movie.year                                                                            # Acá estoy actualizando el año del registro
+    result.rating = movie.rating                                                                        # Acá estoy actualizando la calificación del registro
+    result.category = movie.category                                                                    # Acá estoy actualizando la categoría del registro
+
+    db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
+
+    return JSONResponse(status_code=200, content={'message': 'Movie updated successfully'})             # Acá estoy retornando un mensaje de éxito
 
 
 @app.put('/moviesImproved/{id}', tags=['movies2'])
@@ -225,11 +232,16 @@ async def update_movie(id: int, request: Request):
 # Aplicando Metodos Delete
 @app.delete('/movies/{id}', tags=["movies"], response_model=dict, status_code=200)
 def delete_movie(id: int) -> dict:
-    for movie in movies:
-        if movie['id'] == id:
-            movies.remove(movie)
-            return JSONResponse(content={'message': 'Movie deleted successfully'}, status_code=200)
-    return JSONResponse(content={'message': 'Movie not found'}, status_code=404)
+    db = Session()                                                                                      # Creo la sesión de la base de datos
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()                                   # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL y lo guardo en la variable result solo el primer registro que encuentre
+
+    if not result:
+        return JSONResponse(status_code = 404, content = {'message': 'Movie not found'})                # Acá estoy retornando un mensaje de error si no se encuentra el registro
+    
+    db.delete(result)                                                                                   # Acá estoy eliminando el registro de la base de datos
+    db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
+
+    return JSONResponse(content={'message': 'Movie deleted successfully'}, status_code=200)             # Acá estoy retornando un mensaje de éxito
 
 
 @app.delete('/moviesImproved/{id}', tags=['movies2'])

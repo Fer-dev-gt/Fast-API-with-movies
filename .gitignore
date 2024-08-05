@@ -22,3 +22,5 @@ venv/
 instance/
 .webenv
 .scrapy_httpcache
+
+database.sqlite
