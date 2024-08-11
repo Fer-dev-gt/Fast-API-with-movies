@@ -1,39 +1,16 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi import Depends, Path, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import List
 from config.database import Session
 from models.movie import Movie as MovieModel
 from fastapi.encoders import jsonable_encoder
 from middlewares.jwt_bearer import JWTBearer
 from fastapi.responses import HTMLResponse
 from services.movie import MovieService
+from schemas.movie import Movie
 
 movie_router = APIRouter() 
-
-class Movie(BaseModel):
-    id: Optional[int] = None
-    title: str = Field(min_length=5, max_length=15)
-    overview: str = Field(min_length=15, max_length=50)
-    year: int = Field(le=2022)
-    rating: float = Field(ge=1, le=10)
-    category: str = Field(min_length=5, max_length=15)
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "id": 1,
-            "title": "No title",
-            "overview": "No overview",
-            "year": 2022,
-            "rating": 7.8,
-            "category": "No category"
-                }
-            ]
-        }
-    }
 
 
 movies = [
@@ -143,9 +120,8 @@ def get_movie_by_category(category: str = Query(min_length=5, max_length=20), ye
 @movie_router.post('/movies', tags=["movies"], response_model=dict, status_code=201)
 def create_movie(movie: Movie) -> dict:
     db = Session()                                                                                      # Creo la sesión de la base de datos
-    new_movie = MovieModel(**movie.model_dump())                                                        # Acá estoy creando una instancia de la clase MovieModel con los datos que vienen en el body de la petición, el ** significa que estoy desempaquetando el diccionario
-    db.add(new_movie)                                                                                   # Acá estoy agregando la instancia de la clase MovieModel a la sesión de la base de datos
-    db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
+
+    MovieService(db).create_movie(movie)                                                               # Acá estoy creando un nuevo registro en la tabla movies
 
     return JSONResponse(content={'message': 'Movie created successfully'}, status_code=201)
 
@@ -156,16 +132,12 @@ def create_movie(movie: Movie) -> dict:
 def update_movie(id: int, movie: Movie) -> dict:
 
     db = Session()                                                                                      # Creo la sesión de la base de datos
-    result = db.query(MovieModel).filter(MovieModel.id == id).first()                                   # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL y lo guardo en la variable result solo el primer registro que encuentre
+    result = MovieService(db).get_movie(id)                                                             # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL
 
     if not result:
         return JSONResponse(status_code = 404, content = {'message': 'Movie not found'})                # Acá estoy retornando un mensaje de error si no se encuentra el registro
     
-    result.title = movie.title                                                                          # Acá estoy actualizando el título del registro
-    result.overview = movie.overview                                                                    # Acá estoy actualizando la descripción del registro
-    result.year = movie.year                                                                            # Acá estoy actualizando el año del registro
-    result.rating = movie.rating                                                                        # Acá estoy actualizando la calificación del registro
-    result.category = movie.category                                                                    # Acá estoy actualizando la categoría del registro
+    MovieService(db).update_movie(id, movie)                                                           # Acá estoy actualizando el registro de la tabla movies
 
     db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
     db.refresh(result)                                                                                  # Acá estoy refrescando el registro
@@ -189,14 +161,12 @@ async def update_movie(id: int, request: Request):
 @movie_router.delete('/movies/{id}', tags=["movies"], response_model=dict, status_code=200)
 def delete_movie(id: int) -> dict:
     db = Session()                                                                                      # Creo la sesión de la base de datos
-    result = db.query(MovieModel).filter(MovieModel.id == id).first()                                   # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL y lo guardo en la variable result solo el primer registro que encuentre
+    result : MovieModel = db.query(MovieModel).filter(MovieModel.id == id).first()                      # Acá estoy obteniendo el registro de la tabla movies que tenga el id que viene en la URL
 
     if not result:
         return JSONResponse(status_code = 404, content = {'message': 'Movie not found'})                # Acá estoy retornando un mensaje de error si no se encuentra el registro
     
-    db.delete(result)                                                                                   # Acá estoy eliminando el registro de la base de datos
-    db.commit()                                                                                         # Acá estoy guardando los cambios en la base de datos
-    db.refresh(result)                                                                                  # Acá estoy refrescando el registro
+    MovieService(db).delete_movie(id)                                                                  # Acá estoy eliminando el registro de la tabla movies
 
     return JSONResponse(content={'message': 'Movie deleted successfully'}, status_code=200)             # Acá estoy retornando un mensaje de éxito
 
