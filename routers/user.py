@@ -1,6 +1,6 @@
 
 from fastapi import APIRouter
-from jwt_manager import create_token
+from util.jwt_manager import create_token
 from fastapi.responses import JSONResponse
 from schemas.user import User
 
